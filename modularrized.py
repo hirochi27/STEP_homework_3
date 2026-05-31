@@ -47,6 +47,10 @@ def read_right_paren(line, index):
     token = {"type": "RIGHT_PAREN"}
     return token, index + 1
 
+def read_abs(line, index):
+    token = {"type": "ABS"}
+    return token, index + 3
+
 
 #入力された文字列をトークン化
 def tokenize(line):
@@ -67,6 +71,8 @@ def tokenize(line):
             (token, index) = read_left_paren(line, index)
         elif line[index] == ")":
             (token, index) = read_right_paren(line, index)
+        elif line[index] == "a":
+            (token, index) = read_abs(line, index)
         else:
             print('Invalid character found: ' + line[index])
             exit(1)
@@ -76,6 +82,7 @@ def tokenize(line):
 
 
 #####################括弧の処理#######################
+
 #括弧内を切り出す
 def paren(tokens, index):
     stack = []
@@ -84,7 +91,7 @@ def paren(tokens, index):
         if tokens[index]["type"] == "LEFT_PAREN":
             stack.append(index)
             index += 1  
-                #閉じ括弧を見つけたら一番新しい左括弧を取り出し、かっこ内を抜き出す
+        #閉じ括弧を見つけたら一番新しい左括弧を取り出し、かっこ内を抜き出す
         elif tokens[index]["type"] == "RIGHT_PAREN":
             left_paren = stack.pop()
             inner_tokens = {
@@ -100,16 +107,30 @@ def paren(tokens, index):
     return None
 
 #括弧内を計算した値と入れ替え
-def evaluate_paren(tokens, inner_tokens, inner_answer):
-    #print("evaluate_paren")
+def evaluate_paren(tokens, inner_tokens):
+    #括弧内を計算
+    inner_answer_tokens = manegement_aster_division(inner_tokens["inner_tokens"])
+    inner_answer = evaluate(inner_answer_tokens)
+
     left_index = inner_tokens["left_index"]
     right_index = inner_tokens["right_index"]
 
-    #print(f"left {left_index}")
-    #print(f"right {right_index}")
-    
     tokens[left_index : right_index + 1] = [{'type': 'NUMBER', 'number': inner_answer}]
     #print(tokens)
+    return tokens
+
+#abs絶対値の計算
+def evaluate_abs(tokens, inner_tokens):
+    inner_answer_tokens = manegement_aster_division(inner_tokens["inner_tokens"])
+    inner_answer = evaluate(inner_answer_tokens)
+
+    if inner_answer < 0:
+        inner_answer = (-1) * inner_answer
+
+    left_index = inner_tokens["left_index"]
+    right_index = inner_tokens["right_index"]
+
+    tokens[left_index - 1 : right_index + 1] = [{'type': 'NUMBER', 'number': inner_answer}]
     return tokens
 
 
@@ -120,18 +141,12 @@ def manegement_paren(tokens):
         #print(f"indexの中身{tokens[index]}")
         if tokens[index]["type"] == "LEFT_PAREN":
             inner_tokens = paren(tokens, index)
-            if inner_tokens == None:
-                return tokens
-            
-            #括弧内を計算
-            inner_answer_tokens = manegement_aster_division(inner_tokens["inner_tokens"])
-            inner_answer = evaluate(inner_answer_tokens)
-            #print("カッコ内計算OK")
-            #print(f"inner_answer {inner_answer}")
 
             #括弧の種類ごとに処理
-            if inner_tokens["type"] == "PAREN":
-                tokens = evaluate_paren(tokens, inner_tokens, inner_answer)
+            if tokens[inner_tokens["left_index"] - 1]["type"] == "ABS":
+                tokens = evaluate_abs(tokens, inner_tokens)
+            elif inner_tokens["type"] == "PAREN":
+                tokens = evaluate_paren(tokens, inner_tokens)            
             else:
                 index += 1
         else:
@@ -151,6 +166,8 @@ def evaluate_aster(tokens, index):
 
 #除算
 def evaluate_division(tokens, index):
+    #print(tokens)
+    #print(index)
     tokens[index -1] = str(tokens[index - 1]["number"] / tokens[index + 1]["number"])
     tokens[index - 1] = tokenize(tokens[index-1])[0]
     tokens.pop(index)
@@ -193,15 +210,16 @@ def evaluate(tokens):
         index += 1
     return answer
 
-
+########################################
 
 #テスト
 def test(line):
     tokens = tokenize(line)
-    #print("tokenize OK")
+    print("tokenize OK")
     tokens = manegement_paren(tokens)
-    #print("paren OK")
+    print("paren OK")
     tokens = manegement_aster_division(tokens)
+    print(tokens)   
     actual_answer = evaluate(tokens)
     expected_answer = eval(line)
     if abs(actual_answer - expected_answer) < 1e-8:
@@ -242,7 +260,9 @@ def run_test():
     #負の数は考えない？　test("1+(2+6)*5-(5*3-1/(7-8))")
     #マイナス×マイナスの計算ができない
   
-  
+    test("abs(1-3)")
+
+
     print("==== Test finished! ====\n")
 
 run_test()
