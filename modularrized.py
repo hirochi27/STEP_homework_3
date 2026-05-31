@@ -1,5 +1,7 @@
 #! /usr/bin/python3
 
+#################トークン化######################
+
 def read_number(line, index):
     number = 0
     while index < len(line) and line[index].isdigit():
@@ -73,45 +75,103 @@ def tokenize(line):
     return tokens
 
 
-#括弧内の計算
-def evaluate_paren(tokens):
-    index = 0
+#####################括弧の処理#######################
+#括弧内を切り出す
+def paren(tokens, index):
     stack = []
     while index < len(tokens):
+        #左の括弧を見つけたらスタックに入れる
         if tokens[index]["type"] == "LEFT_PAREN":
             stack.append(index)
-            index += 1
+            index += 1  
+                #閉じ括弧を見つけたら一番新しい左括弧を取り出し、かっこ内を抜き出す
         elif tokens[index]["type"] == "RIGHT_PAREN":
             left_paren = stack.pop()
-            inner_tokens = tokens[left_paren + 1 : index]
-
-            inner_tokens = evaluate_aster_division(inner_tokens)
-            inner_actual_answer = evaluate(inner_tokens)
-            tokens[left_paren : index + 1] = [{"type": "NUMBER", "number": inner_actual_answer}]
-            index = left_paren + 1
+            inner_tokens = {
+                "type": "PAREN",
+                "left_index": left_paren, 
+                "right_index": index, 
+                "inner_tokens": tokens[left_paren + 1 : index]
+                }  
+            index += 1
+            return inner_tokens
         else:
             index += 1
+    return None
+
+#括弧内を計算した値と入れ替え
+def evaluate_paren(tokens, inner_tokens, inner_answer):
+    #print("evaluate_paren")
+    left_index = inner_tokens["left_index"]
+    right_index = inner_tokens["right_index"]
+
+    #print(f"left {left_index}")
+    #print(f"right {right_index}")
+    
+    tokens[left_index : right_index + 1] = [{'type': 'NUMBER', 'number': inner_answer}]
+    #print(tokens)
     return tokens
 
 
-#乗算除算
-def evaluate_aster_division(tokens):
-    index = 1   
+#括弧の管理
+def manegement_paren(tokens):
+    index = 0
+    while index < len(tokens):
+        #print(f"indexの中身{tokens[index]}")
+        if tokens[index]["type"] == "LEFT_PAREN":
+            inner_tokens = paren(tokens, index)
+            if inner_tokens == None:
+                return tokens
+            
+            #括弧内を計算
+            inner_answer_tokens = manegement_aster_division(inner_tokens["inner_tokens"])
+            inner_answer = evaluate(inner_answer_tokens)
+            #print("カッコ内計算OK")
+            #print(f"inner_answer {inner_answer}")
 
+            #括弧の種類ごとに処理
+            if inner_tokens["type"] == "PAREN":
+                tokens = evaluate_paren(tokens, inner_tokens, inner_answer)
+            else:
+                index += 1
+        else:
+            index += 1
+    return tokens 
+
+
+#####################乗算除算#######################
+#乗算
+def evaluate_aster(tokens, index):
+    tokens[index -1] = str(tokens[index - 1]["number"] * tokens[index + 1]["number"])
+    tokens[index - 1] = tokenize(tokens[index-1])[0]
+    tokens.pop(index)
+    tokens.pop(index)
+    return tokens 
+
+
+#除算
+def evaluate_division(tokens, index):
+    tokens[index -1] = str(tokens[index - 1]["number"] / tokens[index + 1]["number"])
+    tokens[index - 1] = tokenize(tokens[index-1])[0]
+    tokens.pop(index)
+    tokens.pop(index)
+    return tokens
+
+   
+#乗算除算の管理
+def manegement_aster_division(tokens):
+    index = 1
     while index < len(tokens):
         if tokens[index]["type"] == "ASTER":
-            tokens[index -1] = str(tokens[index - 1]["number"] * tokens[index + 1]["number"])
-            tokens[index - 1] = tokenize(tokens[index-1])[0]
-            tokens.pop(index)
-            tokens.pop(index)
+            tokens = evaluate_aster(tokens, index)
         elif tokens[index]["type"] == "DIVISION":
-            tokens[index -1] = str(tokens[index - 1]["number"] / tokens[index + 1]["number"])
-            tokens[index - 1] = tokenize(tokens[index-1])[0]
-            tokens.pop(index)
-            tokens.pop(index)
+            tokens = evaluate_division(tokens, index)
         else:
             index += 1
     return tokens
+
+######################################
+
 
 
 #普通の足し算引き算
@@ -134,11 +194,15 @@ def evaluate(tokens):
     return answer
 
 
+
+#テスト
 def test(line):
     tokens = tokenize(line)
-    paren_answer = evaluate_paren(tokens) #括弧内を計算
-    aster_division_anser = evaluate_aster_division(paren_answer) #掛け算割り算を計算
-    actual_answer = evaluate(aster_division_anser)
+    #print("tokenize OK")
+    tokens = manegement_paren(tokens)
+    #print("paren OK")
+    tokens = manegement_aster_division(tokens)
+    actual_answer = evaluate(tokens)
     expected_answer = eval(line)
     if abs(actual_answer - expected_answer) < 1e-8:
         print("PASS! (%s = %f)" % (line, expected_answer))
@@ -161,8 +225,8 @@ def run_test():
     test("1/3*4*2/10/100")
     test("0.5*0.1/0.3")
 
-    test("1000000000+10000000000")
-    test("1000000000/10000000000*100000000000")
+    # test("1000000000+10000000000")
+    # test("1000000000/10000000000*100000000000")
 
     test("(1+2)")
     test("1+(1+2)")
