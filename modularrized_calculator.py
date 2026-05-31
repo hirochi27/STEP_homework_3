@@ -72,29 +72,24 @@ def tokenize(line):
     return tokens
 
 
-# def evaluate_paren(tokens):
-#     index = 1
+def evaluate_paren(tokens):
+    index = 0
+    stack = []
+    while index < len(tokens):
+        if tokens[index]["type"] == "LEFT_PAREN":
+            stack.append(index)
+            index += 1
+        elif tokens[index]["type"] == "RIGHT_PAREN":
+            left_paren = stack.pop()
+            inner_tokens = tokens[left_paren + 1 : index]
 
-#     while index < len(tokens):
-#         if tokens[index]["type"] == "LEFT_PAREN":
-#             stack = []
-#             stack.append(index)
-#             index += 1
-#         elif tokens[index]["type"] == "left_PAREN":
-#             left_paren = stack.pop()
-#             ebvaluate_paren = tokens[left_paren : index]
-#             paren_answer = 
-#             tokens.insert(left_paren, )
-#             tokens.pop(left_paren+1 : index + 1)
-#             index += 1
-
-            # left_paren_index = index
-            # stack = []
-            # while tokens[index]["type"] == "RIGHT_PAREN":
-            #     stack.append(tokens[index])
-            #     index += 1
-            # right_paren_index = index
-            # stack.appned(tokens[index])#一番内側の右括弧を入れる
+            inner_tokens = evaluate_aster_division(inner_tokens)
+            inner_actual_answer = evaluate(inner_tokens)
+            tokens[left_paren : index + 1] = [{"type": "NUMBER", "number": inner_actual_answer}]
+            index = left_paren + 1
+        else:
+            index += 1
+    return tokens
 
 
 def evaluate_aster_division(tokens):
@@ -128,11 +123,6 @@ def evaluate(tokens):
                 answer += tokens[index]['number']
             elif tokens[index - 1]['type'] == 'MINUS':
                 answer -= tokens[index]['number']
-            # elif tokens[index - 1]['type'] == 'ASTER':
-            #     answer *= tokens[index]['number']
-            # elif tokens[index -1]['type'] == 'DIVISION':
-            #     answer /= tokens[index]['number']
-            # elif tokens[index -1]["type"] == "LRFT_PAREN":
             else:
                 print('Invalid syntax')
                 exit(1)
@@ -142,8 +132,8 @@ def evaluate(tokens):
 
 def test(line):
     tokens = tokenize(line)
-    # paren_answer = evaluate_paren(tokens) #括弧内を計算
-    aster_division_anser = evaluate_aster_division(tokens) #掛け算割り算を計算
+    paren_answer = evaluate_paren(tokens) #括弧内を計算
+    aster_division_anser = evaluate_aster_division(paren_answer) #掛け算割り算を計算
     actual_answer = evaluate(aster_division_anser)
     expected_answer = eval(line)
     if abs(actual_answer - expected_answer) < 1e-8:
@@ -169,7 +159,22 @@ def run_test():
 
     test("1000000000+10000000000")
     test("1000000000/10000000000*100000000000")
-    
+
+    test("(1+2)")
+    test("1+(1+2)")
+    test("(1+2)+3")
+    test("1*(3+2)")
+    test("1+(2*3)")
+    test("1+2*3/4*(5+6/7)")
+    test("2+3*1/(8*(2+9/2))")
+    test("5+(1+2)-(4-1)")
+    test("((1+2)+(3+4))")
+    test("((1*2)/(3+4))")
+    test("(2+6)*0.5+1-(5*3-1/(7-0.8))")
+    #負の数は考えない？　test("1+(2+6)*5-(5*3-1/(7-8))")
+    #マイナス×マイナスの計算ができない
+  
+  
     print("==== Test finished! ====\n")
 
 run_test()
