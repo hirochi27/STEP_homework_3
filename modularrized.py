@@ -17,12 +17,12 @@ def read_number(line, index):
     token = {'type': 'NUMBER', 'number': number}
     return token, index
 
-
+#和算
 def read_plus(line, index):
     token = {'type': 'PLUS'}
     return token, index + 1
 
-
+#減算
 def read_minus(line, index):
     token = {'type': 'MINUS'}
     return token, index + 1
@@ -47,6 +47,7 @@ def read_right_paren(line, index):
     token = {"type": "RIGHT_PAREN"}
     return token, index + 1
 
+#abs
 def read_abs(line, index):
     token = {"type": "ABS"}
     return token, index + 3
@@ -87,10 +88,12 @@ def tokenize(line):
 def paren(tokens, index):
     stack = []
     while index < len(tokens):
+
         #左の括弧を見つけたらスタックに入れる
         if tokens[index]["type"] == "LEFT_PAREN":
             stack.append(index)
             index += 1  
+
         #閉じ括弧を見つけたら一番新しい左括弧を取り出し、かっこ内を抜き出す
         elif tokens[index]["type"] == "RIGHT_PAREN":
             left_paren = stack.pop()
@@ -108,28 +111,34 @@ def paren(tokens, index):
 
 #括弧内を計算した値と入れ替え
 def evaluate_paren(tokens, inner_tokens):
+
     #括弧内を計算
     inner_answer_tokens = manegement_aster_division(inner_tokens["inner_tokens"])
     inner_answer = evaluate(inner_answer_tokens)
 
     left_index = inner_tokens["left_index"]
     right_index = inner_tokens["right_index"]
-
+    
+    #括弧内の結果をトークン化
     tokens[left_index : right_index + 1] = [{'type': 'NUMBER', 'number': inner_answer}]
     #print(tokens)
     return tokens
 
+
 #abs絶対値の計算
 def evaluate_abs(tokens, inner_tokens):
+    #括弧内を計算
     inner_answer_tokens = manegement_aster_division(inner_tokens["inner_tokens"])
     inner_answer = evaluate(inner_answer_tokens)
 
+    #括弧内の結果が負の数の場合、正の数に変換
     if inner_answer < 0:
         inner_answer = (-1) * inner_answer
 
     left_index = inner_tokens["left_index"]
     right_index = inner_tokens["right_index"]
-
+    
+    #結果をトークン化
     tokens[left_index - 1 : right_index + 1] = [{'type': 'NUMBER', 'number': inner_answer}]
     return tokens
 
@@ -139,6 +148,7 @@ def manegement_paren(tokens):
     index = 0
     while index < len(tokens):
         #print(f"indexの中身{tokens[index]}")
+        #左括弧を見つけたら、この処理を始める
         if tokens[index]["type"] == "LEFT_PAREN":
             inner_tokens = paren(tokens, index)
 
@@ -187,9 +197,9 @@ def manegement_aster_division(tokens):
             index += 1
     return tokens
 
-######################################
 
 
+###################和算減算########################
 
 #普通の足し算引き算
 def evaluate(tokens):
@@ -210,7 +220,7 @@ def evaluate(tokens):
         index += 1
     return answer
 
-########################################
+
 
 #テスト
 def test(line):
